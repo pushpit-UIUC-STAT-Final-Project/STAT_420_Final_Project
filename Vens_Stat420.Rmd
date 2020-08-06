@@ -1,5 +1,6 @@
 ---
-title: "Stat420 - Predicting Life Expectancy"
+title: "Predicting Life Expectancy"
+author: "Venslaus Prakash Arokiaraj, Pushpit Saxena"
 output:
   html_document: 
     theme: readable
@@ -9,9 +10,68 @@ output:
 urlcolor: dodgerblue
 ---
 
+<style>
+body {
+text-align: justify}
+</style>
+
+***
+
 # Introduction
 
+This project will mainly focus on studying different factors that play statistically significant role in influencing **Life Expectancy**. Some of the factors we will be focussing on are economic factors, social factors, health services factors (like immunizzation levels), mortality rate and various other health related factors. 
+
+## Dataset Information
+
+Based on the description of the dataset on [kaggle](https://www.kaggle.com/kumarajarshi/life-expectancy-who), the Global Health Observatory(**GHO**) data repository under World Health Organization (**WHO**) keeps track of the health status as well as many other related factors for all countries. The datasets are made available to public for the purpose of health data analysis. This datset was collected from WHO and United Nations website and then the individual data files have been combined into a single data set (read more [here](https://www.kaggle.com/kumarajarshi/life-expectancy-who#Description))
+
+## Description
+
+The dataset we will be using for this project is Life Expectancy data that can be found at [Life Expectancy (WHO)](https://www.kaggle.com/kumarajarshi/life-expectancy-who?select=Life+Expectancy+Data.csv). The dataset has 22 variables and  2939 observations which needs some cleanup. (*Note: we have also provided the dataset as part of the .zip [[`lifeExpectancyData`](lifeExpectancyData.csv)] that we have uploaded for this proposal*).
+
+## Data fields
+
+Following are some of the important variables used in this dataset:
+
+- **`Country`** (String): Country of observation
+
+- **`Year`** (Integer): Year of observation
+
+- **`Status`** (String): Whether the country of observation is developed or developing.
+
+- **`Life expectancy`** (Decimal): Life expectancy in age
+
+- **`Adult Mortality`** (Integer): Adult Mortality Rates of both sexes (probability of dying between 15 and 60 years per 1000 population) 
+
+- **`Infant deaths`** (Integer): Number of Infant Deaths per 1000 population
+
+- **`Alcohol`** (Decimal): Alcohol, recorded per capita (15+) consumption (in litres of pure alcohol) 
+
+- **`Percentage Expenditure`** (Decimal): Expenditure on health as a percentage of Gross Domestic Product per capita(%)
+
+- **`Hepatitis B`** (Int): Hepatitis B (HepB) immunization coverage among 1-year-olds (%) 
+
+- **`Measles`** (Int): Measles - number of reported cases per 1000 population 
+
+- **`BMI`** (Decimal): Average Body Mass Index of entire population
+
+- **`Under-five deaths`** (Int): Number of under-five deaths per 1000 population
+
+- **`Polio`** (Int): Polio (Pol3) immunization coverage among 1-year-olds (%)
+
+- **`Total expenditure`** (Decimal): General government expenditure on health as a percentage of total government expenditure (%)
+
+- **`Diphtheria`** (Int): Diphtheria tetanus toxoid and pertussis (DTP3) immunization coverage among 1-year-olds (%)
+
+- **`HIV/AIDS`** (Decimal): Deaths per 1 000 live births HIV/AIDS (0-4 years)
+
+- **`GDP`** (Decimal): Gross Domestic Product per capita (in USD)
+
+- **`Population`** (Int): Population of the country
+
 # Methods
+
+## Data Cleaning
 
 # Results
 
