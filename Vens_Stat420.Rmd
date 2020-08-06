@@ -82,6 +82,12 @@ Following are some of the important variables used in this dataset:
 
 - **`Population`** (Int): Population of the country
 
+## Goals of the model
+
+- From the standpoint of our research and learning, one of the primary reason for us to pick this dataset, is the size as well as variety of predictors that are available. We believe that this dataset is perfect for us to practice and implement majority of the techniques we have learned as part of the course and get a hands-on experience on a real life dataset.
+
+- From larger perspective of data exploration and using data science to address real world issues, this dataset gives us an opportunity to try and answer some of the most important questions the human race is facing, like various factors affecting the longevity of life. As we briefly mentioned in our project description, we are interested in determining different factors which contributes to lower the value of life expectancy. Particularly, in this dataset as the observations are based on different countries, if we are able to find a good model than we can answer questions like what a country needs to focus on in order to have better life expectancy.
+
 # Methods
 
 ## Data Cleaning
