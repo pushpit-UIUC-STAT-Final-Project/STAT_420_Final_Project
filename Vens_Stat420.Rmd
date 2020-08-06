@@ -17,6 +17,19 @@ text-align: justify}
 
 ***
 
+# Team
+
+- Name: **team_bbg**
+
+- Size: **`2`**
+
+- Details:
+
+| Member Name                | Member NetId |
+|----------------------------|--------------| 
+| Pushpit Saxena             | `pushpit2`   |
+| Venslaus Prakash Arokiaraj | `vpa2`       |
+
 # Introduction
 
 This project will mainly focus on studying different factors that play statistically significant role in influencing **Life Expectancy**. Some of the factors we will be focussing on are economic factors, social factors, health services factors (like immunizzation levels), mortality rate and various other health related factors. 
@@ -72,6 +85,29 @@ Following are some of the important variables used in this dataset:
 # Methods
 
 ## Data Cleaning
+
+Life Expectancy dataset was provided by WHO and it had lot of NA values. Hence the data had to be cleaned up in the following manner.
+
+```{r}
+library(gridExtra)
+library(reshape2)
+library(tidyverse)
+
+# Reading the dataset
+who = read.csv("LifeExpectancyData.csv")
+
+# Original number of records
+nrow(who)
+
+# Data Cleanup
+who = who %>% 
+  drop_na() %>% 
+  filter(!is.na(Life.expectancy), !is.na(Adult.Mortality), !is.na(infant.deaths))
+
+# Number of records after data cleanup
+nrow(who)
+```
+
 
 # Results
 
