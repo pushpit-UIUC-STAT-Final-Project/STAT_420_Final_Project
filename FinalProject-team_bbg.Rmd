@@ -34,18 +34,17 @@ text-align: justify}
 
 ## Introduction
 
-This project will mainly focus on studying different factors that play statistically significant role in influencing **Life Expectancy**. Some of the factors we will be focussing on are economic factors, social factors, health services factors (like immunizzation levels), mortality rate and various other health related factors. We will be building different multiple linear regression models and will try to apply some of concepts that we have learned as part of this course (STAT 420) to analyze and find the appropriate models for predicting life expectancy. 
+This project will mainly focus on studying different factors that play statistically significant role in influencing **Life Expectancy**. We will be focusing on a wide variety of factors such as economic factors, social factors, health services factors (like immunizzation levels), mortality rate and various other health related factors that influence life expectancy. 
 
- 
-# Dataset
+## Dataset Information
 
-## Background
-
-Based on the description of the dataset on [kaggle](https://www.kaggle.com/kumarajarshi/life-expectancy-who), the Global Health Observatory(**GHO**) data repository under World Health Organization (**WHO**) keeps track of the health status as well as many other related factors for all countries The datasets are made available to public for the purpose of health data analysis. This datset was collected from WHO and United Nations website and then the individual data files have been combined into a single data set (read more [here](https://www.kaggle.com/kumarajarshi/life-expectancy-who#Description))
+Based on the description of the dataset on [kaggle](https://www.kaggle.com/kumarajarshi/life-expectancy-who), the Global Health Observatory(**GHO**) data repository under World Health Organization (**WHO**) keeps track of the health status as well as many other related factors for all countries. The datasets are made available to public for the purpose of health data analysis. This datset was collected from WHO and United Nations website and then the individual data files have been combined into a single data set (read more [here](https://www.kaggle.com/kumarajarshi/life-expectancy-who#Description))
 
 ## Description
 
-The dataset we will be using for this project is Life Expectancy data that can be found at [Life Expectancy (WHO)](https://www.kaggle.com/kumarajarshi/life-expectancy-who?select=Life+Expectancy+Data.csv). The dataset has 22 variables and  2939 observations which needs some cleanup. (*Note: we have also provided the dataset as part of the .zip [[`lifeExpectancyData`](lifeExpectancyData.csv)] that we have uploaded for this proposal*).
+The dataset we will be using for this project is Life Expectancy data that can be found at [Life Expectancy (WHO)](https://www.kaggle.com/kumarajarshi/life-expectancy-who?select=Life+Expectancy+Data.csv). The dataset has 22 variables and  2939 observations which needs some cleanup. (*Note: we have also provided the dataset as part of the .zip [[`lifeExpectancyData`](lifeExpectancyData.csv)] that we have uploaded along with the project*).
+
+## Data fields
 
 Following are some of the important variables used in this dataset:
 
@@ -85,39 +84,11 @@ Following are some of the important variables used in this dataset:
 
 - **`Population`** (Int): Population of the country
 
-# Data Source
+## Goals of the model
 
-We have attached the data file in the **`.zip`** [[`lifeExpectancyData`](lifeExpectancyData.csv)] .
-
-If needed, this dataset can also be downloaded from [kaggle](https://www.kaggle.com/kumarajarshi/life-expectancy-who)
-
-# Our Motivation
-
-- From the standpoint of our research and learning, one of the primary reason for us to pick this dataset, is the size as well as variety of predictors that are available. We believe that this dataset is perfect for us to practice and implement majority of the techniques we have learned as part of the course and get a hands-on experience on a real life dataset.
+- From a research standpoint, one of the primary reason for us to pick this dataset is the size as well as variety of predictors that are available. We believe that this dataset is perfect for us to practice and implement majority of the techniques we have learned as part of the course and get a hands-on experience on a real life dataset.
 
 - From larger perspective of data exploration and using data science to address real world issues, this dataset gives us an opportunity to try and answer some of the most important questions the human race is facing, like various factors affecting the longevity of life. As we briefly mentioned in our project description, we are interested in determining different factors which contributes to lower the value of life expectancy. Particularly, in this dataset as the observations are based on different countries, if we are able to find a good model than we can answer questions like what a country needs to focus on in order to have better life expectancy.
-
-# Data (Evidence)
-
-- Reading the data file:
-
-```{r}
-life_expectancy_data <- read.csv("lifeExpectancyData.csv")
-```
-
-- Data snippet
-
-```{r}
-library(tibble)
-as_tibble(life_expectancy_data)
-```
-
-- First few values of `Life Expectancy` (response):
-
-```{r}
-life_expectancy_data[1:10, c("Life.expectancy")]
-```
-
 
 # Methods and Results
 
@@ -175,7 +146,7 @@ colnames(raw_data) <- col_names
 
 **Snippet of the raw dataset:**
 
-```{r}
+```{r, warning=FALSE}
 tibble::as.tibble(raw_data)
 ```
 
@@ -190,6 +161,7 @@ knitr::kable(t(do.call(cbind, lapply(raw_data %>% select_if(negate(is.factor)), 
 ```
 
 We can see that only `10` observations have missing values for the response field `life_expectancy`, so we drop those `10` observations as dropping them will not make much difference to the models that we will try. 
+
 ```{r}
 mod_data_df <- raw_data[!is.na(raw_data$life_expectancy),]
 nrow(mod_data_df)
@@ -246,7 +218,7 @@ dd
 ```
 
 
-```{r}
+```{r warning=FALSE, echo = FALSE}
 library(ggplot2)
 ggplot(data = dd, aes(x = continent, y = mean_life_expectancy)) + geom_bar(stat = "identity")
 
@@ -254,7 +226,7 @@ ggplot(data = raw_data, aes(x = continent, y = life_expectancy)) + geom_boxplot(
 
 ```
 
-```{r fig.width=10, fig.height=10, fig.align="center"}
+```{r fig.width=10, fig.height=10, fig.align="center", warning=FALSE, echo = FALSE}
 library(reshape2)
 library(ggcorrplot)
 cor_mat <- round(cor(na.omit(raw_data[, !(names(raw_data) %in% c("year",
