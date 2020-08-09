@@ -14,7 +14,8 @@ urlcolor: dodgerblue
 
 <style>
 body {
-text-align: justify}
+text-align: justify;
+}
 </style>
 
 ***
@@ -32,9 +33,12 @@ text-align: justify}
 | Venslaus Prakash Arokiaraj | `vpa2`       |
 
 
+# Please note that this is an interim report that we are submitting on coursera, as Prof. David has given us an extension till Sunday (08/09) to submit the final report (via. piazza). Please see [here](ExtensionConfirmation.pdf) for details. *(Final report will have more cleaner structure and some of the experimental models that you see in this will not be in final report. Please use that report for grading.)*  
+
+
 ## Introduction
 
-This project will mainly focus on studying different factors that play statistically significant role in influencing **Life Expectancy**. Some of the factors we will be focussing on are economic factors, social factors, health services factors (like immunizzation levels), mortality rate and various other health related factors. We will be building different multiple linear regression models and will try to apply some of concepts that we have learned as part of this course (STAT 420) to analyze and find the appropriate models for predicting life expectancy. 
+This project will mainly focus on studying different factors that play statistically significant role in influencing **Life Expectancy**. Some of the factors we will be focussing on are economic factors, social factors, health services factors (like immunizzation levels), mortality rate and various other health related factors. We will be building different multiple linear regression models and will try to apply some of concepts that we have learned as part of this course (STAT 420) to analyze and find the appropriate models for predicting life expectancy.
 
  
 # Dataset
@@ -264,10 +268,11 @@ ggcorrplot(cor_mat, lab = TRUE)
 # ggplot(data = melted_cormat, aes(x = Var1, y = Var2, fill = value)) + geom_tile()
 ```
 
+***
 
-# Model Building
+## Model Building
 
-**Splitting the data in training and test set (`90%` training, `10%` hold out test set):
+Splitting the data in training and test set (`90%` training, `10%` hold out test set):
 
 ```{r}
 set.seed(19851115)
@@ -277,104 +282,133 @@ le_tst_data <- cleaned_df[-le_trn_data_idx, ]
 ```
 
 Ignoring all the categorical variables for now (except `status`, we have fitted models using some of these categorical variables but couldn't get better results, code can be seen in Appendix)
+
 ```{r}
 non_cat_predictor_df <- subset(le_trn_data, select = -c(year, country, continent, region))
 ```
 
-Full Additive model (with all the numerical predictor and `status`)
+We started with fitting a full Additive model (with all the numerical predictor and `status`). This will provide us with a good baseline model to do simple as well as more nuanced feature selections later
 
-```{r fig.align="center", fig.width=10, fig.height=10}
+```{r}
 full_additve_model <- lm(life_expectancy ~ ., data = non_cat_predictor_df)
-summary(full_additve_model)
-par(mfrow = c(2, 2))
-plot(full_additve_model, col="darkorange", )
-shapiro.test(resid(full_additve_model))
-calc_rmse(le_tst_data$life_expectancy,
-          predict(full_additve_model, newdata = le_tst_data))
 ```
 
-Removing some of the least significant predictors:
+- Summary of the full additive model
 
-infant deat v. under_5_deaths
+```{r}
+summary(full_additve_model)
+```
 
-```{r fig.align="center", fig.width=10, fig.height=10}
-sig_linear_model <- lm(life_expectancy ~  adult_mortality +
-                         under_five_deaths + bmi + diphtheria + hiv_aids + gdp +
+- Diagnostics plots for full additive model
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align="center"}
+par(mfrow = c(2, 2))
+plot(full_additve_model, col="darkorange")
+```
+
+- Test $\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(full_additve_model, newdata = le_tst_data))`$
+- $R^2 = `r summary(full_additve_model)$r.squared`$
+- We can see that this model show that there are some non-significant predictors in the full model, for e.g. for `alcohol`, if we use t-test for significance:
+  - Null: $H_0:$ $\beta_{alcohol} = 0$
+  - Alternative: $H_0:$ $\beta_{alcohol} \neq 0$
+  - Test Statistics: $`r summary(full_additve_model)$coefficient["alcohol", "t value"]`$
+  - P-value: $`r summary(full_additve_model)$coefficient["alcohol", "Pr(>|t|)"]`$
+  - Decision: **Fail** to reject null
+  - Conclusion: `alcohol` does not have significant linear relationship with `life_expectancy`
+- Also, we can see from the diagnostic plots that both equal variance assumption and normality assumption are suspect.
+
+
+So we started with simple (not recommended) method of removing some of the least significant predictors. Also, there seems to be high collinearity between `infant_deaths` and `under_5_deaths` (check `vif` below and `correlation plot` shown earlier).
+
+```{r}
+car::vif(full_additve_model)
+```
+
+So we removed some of the least significant predictor and kept `infant_deaths`
+
+```{r}
+sig_additive_model <- lm(life_expectancy ~  adult_mortality +
+                         infant_deaths + bmi + diphtheria + hiv_aids + gdp +
                          income_composition_of_resources * status  + schooling,
                        data = non_cat_predictor_df)
-summary(sig_linear_model)
-par(mfrow = c(2, 2))
-plot(sig_linear_model, col="darkorange", )
-calc_rmse(le_tst_data$life_expectancy,
-          predict(sig_linear_model, newdata = le_tst_data))
-
+summary(sig_additive_model)
 ```
 
-```{r fig.align="center", fig.width=10, fig.height=10}
-sig_linear_model <- lm(life_expectancy ~  adult_mortality +
-                         under_five_deaths + bmi * status + diphtheria + hiv_aids + gdp * status +
-                         income_composition_of_resources * status  + schooling * status,
+- Diagnostic plot:
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2, 2))
+plot(sig_additive_model, col="darkorange", )
+```
+
+- Test $\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(sig_additive_model, newdata = le_tst_data))`$
+- $R^2 = `r summary(sig_additive_model)$r.squared`$
+
+```{r fig.align="center"}
+sig_interative_model <- lm(life_expectancy ~  (adult_mortality +
+                         under_five_deaths + bmi  + diphtheria + hiv_aids + gdp  +
+                         income_composition_of_resources + schooling) ^ 2 ,
                        data = non_cat_predictor_df)
-summary(sig_linear_model)
+summary(sig_interative_model)
 par(mfrow = c(2, 2))
-plot(sig_linear_model, col="darkorange", )
+plot(sig_interative_model, col="darkorange", )
 calc_rmse(le_tst_data$life_expectancy,
-          predict(sig_linear_model, newdata = le_tst_data))
+          predict(sig_interative_model, newdata = le_tst_data))
 ```
 
 
 ```{r}
-aic_model_backward <- step(sig_linear_model, direction = "backward")
-summary(aic_model_backward)
-par(mfrow = c(2, 2))
-plot(aic_model_backward, col="darkorange", )
-calc_rmse(le_tst_data$life_expectancy,
-          predict(aic_model_backward, newdata = le_tst_data))
+# aic_model_backward <- step(sig_linear_model, direction = "backward")
+# summary(aic_model_backward)
+# par(mfrow = c(2, 2))
+# plot(aic_model_backward, col="darkorange", )
+# calc_rmse(le_tst_data$life_expectancy,
+#           predict(aic_model_backward, newdata = le_tst_data))
 ```
 
 
 ```{r}
-aic_model_both <- step(sig_linear_model, direction = "both")
-summary(aic_model_both)
-par(mfrow = c(2, 2))
-plot(aic_model_both, col="darkorange", )
-calc_rmse(le_tst_data$life_expectancy,
-          predict(aic_model_both, newdata = le_tst_data))
+# aic_model_both <- step(sig_linear_model, direction = "both")
+# summary(aic_model_both)
+# par(mfrow = c(2, 2))
+# plot(aic_model_both, col="darkorange", )
+# calc_rmse(le_tst_data$life_expectancy,
+#           predict(aic_model_both, newdata = le_tst_data))
 ```
 
 
 ```{r}
-bic_model_both <- step(sig_linear_model, k = log(length(resid(sig_linear_model))), direction = "both")
-summary(bic_model_both)
-par(mfrow = c(2, 2))
-plot(bic_model_both, col="darkorange", )
-calc_rmse(le_tst_data$life_expectancy,
-          predict(bic_model_both, newdata = le_tst_data))
+# bic_model_both <- step(sig_linear_model, k = log(length(resid(sig_linear_model))), direction = "both")
+# summary(bic_model_both)
+# par(mfrow = c(2, 2))
+# plot(bic_model_both, col="darkorange", )
+# calc_rmse(le_tst_data$life_expectancy,
+#           predict(bic_model_both, newdata = le_tst_data))
 ```
 
 
 ```{r}
-bc <- boxcox(sig_linear_model, lambda = seq(-3, 3))
-best.lam <- bc$x[which(bc$y==max(bc$y))]
+# bc <- boxcox(sig_linear_model, lambda = seq(-3, 3))
+# best.lam <- bc$x[which(bc$y==max(bc$y))]
 ```
 
 
 ```{r}
-sig_linear_model_sq <- lm(life_expectancy ^ 2 ~ adult_mortality + alcohol + percentage_expenditure +
-                         under_five_deaths + bmi + diphtheria + hiv_aids + gdp +
-                         income_composition_of_resources  + schooling, data = non_cat_predictor_df)
-summary(sig_linear_model_sq)
-par(mfrow = c(2, 2))
-plot(sig_linear_model_sq, col="darkorange", )
-shapiro.test(resid(sig_linear_model_sq))
-calc_rmse(le_tst_data$life_expectancy,
-          predict(sig_linear_model_sq, newdata = le_tst_data))
+# sig_linear_model_sq <- lm(life_expectancy ^ 2 ~ adult_mortality + alcohol + percentage_expenditure +
+#                          under_five_deaths + bmi + diphtheria + hiv_aids + gdp +
+#                          income_composition_of_resources  + schooling, data = non_cat_predictor_df)
+# summary(sig_linear_model_sq)
+# par(mfrow = c(2, 2))
+# plot(sig_linear_model_sq, col="darkorange", )
+# shapiro.test(resid(sig_linear_model_sq))
+# calc_rmse(le_tst_data$life_expectancy,
+#           predict(sig_linear_model_sq, newdata = le_tst_data))
 ```
 
 ```{r}
-aic_model <- step(sig_linear_model, direction = "both", test = "F")
-par(mfrow = c(2, 2))
-plot(aic_model)
+# aic_model <- step(sig_linear_model, direction = "both", test = "F")
+# par(mfrow = c(2, 2))
+# plot(aic_model)
 ```
 
 ```{r}
@@ -578,17 +612,17 @@ calc_rmse(le_tst_data$life_expectancy, predict(small_cleaner_backward, newdata =
 ```
 
 ```{r fig.width=10, fig.height=10, fig.align="center"}
-pairs(subset(life_clean1, select = c(life_expectancy, adult_mortality, infant_deaths, bmi,
-                                     under_five_deaths, total_expenditure, diphtheria, hiv_aids,
-                                     gdp, thinness_1_19_years, income_composition_of_resources,
-                                     schooling)), col = "deepskyblue")
+# pairs(subset(life_clean1, select = c(life_expectancy, adult_mortality, infant_deaths, bmi,
+#                                      under_five_deaths, total_expenditure, diphtheria, hiv_aids,
+#                                      gdp, thinness_1_19_years, income_composition_of_resources,
+#                                      schooling)), col = "deepskyblue")
 ```
 
 
-```{r}
+```{r fig.width=10, fig.height=10}
 small_cleaner_backward_log <- lm(life_expectancy ~ 
                                    status + log1p(adult_mortality) + log1p(bmi) +
-                                   log1p(under_five_deaths) + total_expenditure + diphtheria + hiv_aids +
+                                   log1p(infant_deaths) + total_expenditure + diphtheria + hiv_aids +
                                    log1p(gdp) + log1p(thinness_1_19_years) + income_composition_of_resources + schooling,
     data = life_clean1)
 
@@ -597,7 +631,8 @@ par(mfrow = c(2, 2))
 plot(small_cleaner_backward_log, col="darkorange")
 
 calc_rmse(le_tst_data$life_expectancy, predict(small_cleaner_backward_log, newdata = le_tst_data))
-
+library(lmtest)
+bptest(small_cleaner_backward_log)
 ```
 
 ```{r}
@@ -639,10 +674,28 @@ calc_rmse(le_tst_data$life_expectancy, sqrt(predict(small_cleaner_backward_box_c
 plot(life_expectancy ~ I(log1p(under_five_deaths)), data = life_clean1)
 ```
 
-```{r}
+```{r fig.width=10}
 small_cleaner_backward_log_poly <- lm(life_expectancy ~ 
                                    status + log1p(adult_mortality)  + I(bmi ^ 2) * status + 
                                    log1p(under_five_deaths) + log1p(total_expenditure) + 
+                                     diphtheria + I(diphtheria ^ 2) + hiv_aids + I(hiv_aids ^ 2) +
+                                   log1p(gdp)  + log1p(thinness_1_19_years) + income_composition_of_resources + I(income_composition_of_resources ^ 2) + I(income_composition_of_resources ^ 3) +
+                                   schooling + I(schooling ^ 2) + I(schooling ^ 3),
+    data = life_clean1)
+
+summary(small_cleaner_backward_log_poly)
+par(mfrow = c(2, 2))
+plot(small_cleaner_backward_log_poly, col="darkorange")
+
+calc_rmse(le_tst_data$life_expectancy, predict(small_cleaner_backward_log_poly, newdata = le_tst_data))
+bptest(small_cleaner_backward_log_poly)
+```
+
+
+```{r}
+small_cleaner_backward_log_poly <- lm(life_expectancy  ~ 
+                                   status + log1p(adult_mortality)  + I(bmi ^ 2) * status + 
+                                   log1p(infant_deaths) + I(infant_deaths ^ 2) + log1p(total_expenditure) + I(gdp ^ 2) +
                                      diphtheria + I(diphtheria ^ 2) + hiv_aids + I(hiv_aids ^ 2) +
                                    log1p(gdp)  + log1p(thinness_1_19_years) + income_composition_of_resources + I(income_composition_of_resources ^ 2) +
                                    schooling + I(schooling ^ 2),
@@ -654,13 +707,34 @@ plot(small_cleaner_backward_log_poly, col="darkorange")
 
 calc_rmse(le_tst_data$life_expectancy, predict(small_cleaner_backward_log_poly, newdata = le_tst_data))
 
+hist(life_clean1$life_expectancy)
+bptest(small_cleaner_backward_log_poly)
+```
+
+```{r fig.width=10}
+small_cleaner_backward_log_poly <- lm(life_expectancy ~ 
+                                   (status + log1p(adult_mortality)  + I(bmi ^ 2) * status + 
+                                   log1p(under_five_deaths) + log1p(total_expenditure) + 
+                                     diphtheria + I(diphtheria ^ 2) + hiv_aids + I(hiv_aids ^ 2) +
+                                   log1p(gdp)  + log1p(thinness_1_19_years) + income_composition_of_resources + I(income_composition_of_resources ^ 2) + I(income_composition_of_resources ^ 3) +
+                                   schooling + I(schooling ^ 2) + I(schooling ^ 3)) ^ 2,
+    data = life_clean1)
+
+# summary(small_cleaner_backward_log_poly)
+par(mfrow = c(2, 2))
+plot(small_cleaner_backward_log_poly, col="dodgerblue")
+
+calc_rmse(le_tst_data$life_expectancy, predict(small_cleaner_backward_log_poly, newdata = le_tst_data))
+bptest(small_cleaner_backward_log_poly)
+
 ```
 
 ```{r}
 life_clean_glm <- life_clean1
 life_clean_glm$life_expectancy_class <- ifelse(life_clean_glm$life_expectancy > 65, "hi", "low")
 life_clean_glm$life_expectancy_class <- as.factor(life_clean_glm$life_expectancy)
-
+le_tst_data$life_expectancy_class <- ifelse(le_tst_data$life_expectancy > 65, "hi", "low")
+le_tst_data$life_expectancy_class <- as.factor(le_tst_data$life_expectancy_class)
 
 small_cleaner_backward_log_poly_logit <- glm(life_expectancy_class ~ 
                                    status + log1p(adult_mortality)  + I(bmi ^ 2) * status + 
@@ -673,7 +747,6 @@ small_cleaner_backward_log_poly_logit <- glm(life_expectancy_class ~
 summary(small_cleaner_backward_log_poly_logit)
 par(mfrow = c(2, 2))
 plot(small_cleaner_backward_log_poly_logit, col="darkorange")
-
 
 ```
 
