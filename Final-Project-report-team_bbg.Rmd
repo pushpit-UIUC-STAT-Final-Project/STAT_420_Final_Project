@@ -1,0 +1,1049 @@
+---
+title: "Predicting Life Expectancy: How long people live? Why? Why not?"
+subtitle: "STAT 420, Summer 2020"
+author: "Pushpit Saxena(netid: pushpit2) & Venslaus Prakash Arokiaraj (netid: vpa2)"
+date: 'July 18th, 2020'
+output:
+  html_document: 
+    theme: readable
+    highlight: tango
+    toc: yes
+  pdf_document: default
+urlcolor: dodgerblue
+---
+
+<style>
+body {
+text-align: justify;
+}
+</style>
+
+***
+
+# Team Information
+
+Name: **team_bbg**
+
+Size: **`2`**
+
+| Member Name                | Member NetId |
+|----------------------------|--------------| 
+| Pushpit Saxena             | `pushpit2`   |
+| Venslaus Prakash Arokiaraj | `vpa2`       |
+
+
+# Introduction
+
+This project will mainly focus on studying different factors that play statistically significant role in influencing **Life Expectancy**. We will be focusing on a wide variety of factors such as economic factors, social factors, health services factors (like immunizzation levels), mortality rate and various other health related factors that influence life expectancy. 
+
+## Dataset Information
+
+Based on the description of the dataset on [kaggle](https://www.kaggle.com/kumarajarshi/life-expectancy-who), the Global Health Observatory(**GHO**) data repository under World Health Organization (**WHO**) keeps track of the health status as well as many other related factors for all countries. The datasets are made available to public for the purpose of health data analysis. This datset was collected from WHO and United Nations website and then the individual data files have been combined into a single data set (read more [here](https://www.kaggle.com/kumarajarshi/life-expectancy-who#Description))
+
+## Description
+
+The dataset we will be using for this project is Life Expectancy data that can be found at [Life Expectancy (WHO)](https://www.kaggle.com/kumarajarshi/life-expectancy-who?select=Life+Expectancy+Data.csv). The dataset has 22 variables and  2939 observations which needs some cleanup. (*Note: we have also provided the dataset as part of the .zip [[`lifeExpectancyData`](lifeExpectancyData.csv)] that we have uploaded along with the project*).
+
+## Data fields
+
+Following are some of the important variables used in this dataset:
+
+- **`Country`** (String): Country of observation
+
+- **`Year`** (Integer): Year of observation
+
+- **`Status`** (String): Whether the country of observation is developed or developing.
+
+- **`Life expectancy`** (Decimal): Life expectancy in age
+
+- **`Adult Mortality`** (Integer): Adult Mortality Rates of both sexes (probability of dying between 15 and 60 years per 1000 population) 
+
+- **`Infant deaths`** (Integer): Number of Infant Deaths per 1000 population
+
+- **`Alcohol`** (Decimal): Alcohol, recorded per capita (15+) consumption (in litres of pure alcohol) 
+
+- **`Percentage Expenditure`** (Decimal): Expenditure on health as a percentage of Gross Domestic Product per capita(%)
+
+- **`Hepatitis B`** (Int): Hepatitis B (HepB) immunization coverage among 1-year-olds (%) 
+
+- **`Measles`** (Int): Measles - number of reported cases per 1000 population 
+
+- **`BMI`** (Decimal): Average Body Mass Index of entire population
+
+- **`Under-five deaths`** (Int): Number of under-five deaths per 1000 population
+
+- **`Polio`** (Int): Polio (Pol3) immunization coverage among 1-year-olds (%)
+
+- **`Total expenditure`** (Decimal): General government expenditure on health as a percentage of total government expenditure (%)
+
+- **`Diphtheria`** (Int): Diphtheria tetanus toxoid and pertussis (DTP3) immunization coverage among 1-year-olds (%)
+
+- **`HIV/AIDS`** (Decimal): Deaths per 1 000 live births HIV/AIDS (0-4 years)
+
+- **`GDP`** (Decimal): Gross Domestic Product per capita (in USD)
+
+- **`Population`** (Int): Population of the country
+
+## Project Goals
+
+- From a research standpoint, one of the primary reason for us to pick this dataset is the size as well as variety of predictors that are available. We believe that this dataset is perfect for us to practice and implement majority of the techniques we have learned as part of the course and get a hands-on experience on a real life dataset. As part of this project (see [Methods and Results]), we tried to utilize the knowledge and techniques we have learned as part of this course. Some of the things we will explore are:
+  - Fit additive & interactive model
+  - Utilize step-wise search (AIC/BIC)
+  - Explore transformations (LOG) of predictors/response
+  - Explore models with polynomial terms
+  - Utilize statistical significance tests like $t$-test and $F$-test
+  - Utilize and analyze diagnostic plots like `Residuals v. Fitted` & `Normal Q-Q` plots.
+  - Utilize performance metrics like $R^2$ and $\text{Test-RMSE}$
+  - Explore outlier detection
+
+- From larger perspective of data exploration and using data science to address real world issues, this dataset also gives us an opportunity to try and answer some of the most important questions the human race is facing, like various factors affecting the longevity of life. As we briefly mentioned in our project description, we are interested in determining different factors which contributes to lower the value of life expectancy. At the end, we would like to answer some of the important factors that we find as part of the final model. Also, we will present some visualizations which will help anybody better understand effects of some factors on life expectancy as well as overall trend of life expectancy across the world over the years.
+
+***
+
+# Methods and Results
+
+<p style="color:#FF6347;font-size:xx-small">Note: We have grouped the <b>Methods</b> and <b>Results</b> sections together, as it is more convenient to demostrate the flow of our research to build the model. We do also have a separate <b>Results</b> section showing the combined results of all the model we experiment with. Also, that section show detailed information and plots for final model.</p>
+
+## Data Cleaning:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyr)
+library(tidyverse)
+library(countrycode)
+library(lemon)
+library(skimr)
+library(naniar)
+library(MASS)
+library(ggplot2)
+knit_print.data.frame <- lemon_print
+```
+
+**Loading the Data:**
+
+```{r message=FALSE, warning=FALSE}
+raw_data <- read.csv("LifeExpectancyData.csv")
+
+# Added Continent
+raw_data$Continent <- countrycode(sourcevar = raw_data[, "Country"],
+                              origin = "country.name",
+                              destination = "continent")
+# Added Region
+raw_data$region <- countrycode(sourcevar = raw_data[, "Country"],
+                              origin = "country.name",
+                              destination = "region")
+
+```
+
+
+```{r echo=FALSE}
+raw_data$Country <- as.factor(raw_data$Country)
+raw_data$Status <- as.factor(raw_data$Status)
+raw_data$Continent <- as.factor(raw_data$Continent)
+raw_data$Year <- as.factor(raw_data$Year)
+raw_data$region <- as.factor(raw_data$region)
+
+
+calc_rmse<- function(actual, predicted) {
+  sqrt(mean((actual - predicted)^2))
+}
+
+```
+
+**Changing the names of the fields to follow a more consistent pattern(snake-case):**
+
+```{r}
+col_names <- tolower(trimws(str_replace_all(colnames(raw_data), "\\.+", "_")))
+# col_names <- tolower(str_replace_all(colnames(raw_data), "\\s+", ""))
+colnames(raw_data) <- col_names
+```
+
+**Snippet of the raw dataset:**
+
+```{r}
+tibble::as.tibble(raw_data)
+```
+
+**Summary of `numeric` fields:**
+
+```{r echo = FALSE, warning=FALSE, message=FALSE}
+# summary_vector <- summary(raw_data %>% select_if(negate(is.factor)))
+# data.frame(unclass(summary_vector), check.names = FALSE, stringsAsFactors = FALSE)
+knitr::kable(t(do.call(cbind, lapply(raw_data %>% select_if(negate(is.factor)), summary))),
+             format.args = list(scientific = FALSE),
+             digits = 2)
+```
+
+We can see that only `10` observations have missing values for the response field `life_expectancy`, so we drop those `10` observations as dropping them will not make much difference to the models that we will try. 
+```{r}
+mod_data_df <- raw_data[!is.na(raw_data$life_expectancy),]
+nrow(mod_data_df)
+```
+
+There are still `r nrow(mod_data_df[!complete.cases(mod_data_df),])` observations with some missing values. 
+We will use the mean of the value for a given `country` to impute some of these values:
+```{r message=FALSE, warning=FALSE}
+new_df <- mod_data_df %>% group_by(country) %>% mutate_if(is.numeric,
+                                              function(x) ifelse(is.na(x), mean(x, na.rm = TRUE), x))
+nrow(new_df[!complete.cases(new_df),])
+```
+
+Still there are some observations with missing values. Next we will use the mean of the values for a given `region` in a particular `year` to impute some of these missing values:
+
+```{r message=FALSE, warning=FALSE}
+cleaned_df <- as.data.frame(new_df %>% group_by(region, year) %>% mutate_if(is.numeric,
+                                              function(x) ifelse(is.na(x), mean(x, na.rm = TRUE), x)) %>% ungroup)
+cleaned_df$region <- as.factor(cleaned_df$region)
+cleaned_df$year <- as.factor(cleaned_df$year)
+nrow(cleaned_df[!complete.cases(cleaned_df),])
+```
+
+Finally, we have imputed all the values and our final dataset has ``r nrow(cleaned_df)`` observations
+
+## Data exploration and visualization
+
+We have presented below some statistics and plots that helped us in our understanding of the dataset. Some of these plots also revealed some interesting pattern in the dataset.
+
+Statistics (by `region`)
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+dd <- as.data.frame(
+raw_data %>%
+  group_by(region) %>%
+  summarize(count = n(),
+            mean_life_expectancy = mean(life_expectancy, na.rm = TRUE),
+            mean_infant_deaths   = mean(infant_deaths, na.rm = TRUE),
+            mean_adult_deaths    = mean(adult_mortality, na.rm = TRUE)
+            ))
+
+colnames(dd) <- c("Region", "#Records", "Avg. Life Expectancy", "Avg. Infant Deaths", "Avg. Adult Deaths")
+knitr::kable(dd)
+```
+
+Statistics (by `continent`)
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+dd <- as.data.frame(
+raw_data %>%
+  group_by(continent) %>%
+  summarize(count = n(),
+            mean_life_expectancy = median(life_expectancy, na.rm = TRUE),
+            mean_infant_deaths   = mean(infant_deaths, na.rm = TRUE),
+            mean_adult_deaths    = mean(adult_mortality, na.rm = TRUE)
+            ))
+colnames(dd) <- c("Continent", "#Records", "Avg. Life Expectancy", "Avg. Infant Deaths", "Avg. Adult Deaths")
+knitr::kable(dd)
+```
+
+
+```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE}
+ggplot(data = raw_data, aes(x = continent, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Continent")
+```
+
+Looking at the statistics and plot above, we can clearly see that countries in the **African** continent has some of the lowest Life expectancy values among all the other countries. One thing we also noticed that there are less observations for **North American** countries.
+
+
+```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE}
+library(ggplot2)
+ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = year)) +
+  ggtitle("Life Expectancy by Year")
+```
+
+We can that on average the `life_expectancy` is improving over the years. 
+
+```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
+library(ggplot2)
+ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Year & Continent")
+```
+
+Again, we can see that **African** countries have some of the lowest `life_expectancy` values over the years and **European** countries have some of the highest `life_expectancy` values.
+
+```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
+library(ggplot2)
+ggplot(data = raw_data, aes(x = life_expectancy, y = log(gdp))) +
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. GDP (by continent)")
+```
+
+We can see that countries with lower `gdp` generally have lower `life_expectancy`.
+
+```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
+ggplot(data = raw_data, aes(x = life_expectancy, y = log(hiv_aids))) +
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. HIV AIDS (by continent)")
+```
+
+We can see that countries with high `HIV Aids` cases generally have lower `life_expectancy`, on average.
+
+```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
+ggplot(data = raw_data, aes(x = life_expectancy, y = log(infant_deaths))) +
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. Infant Deaths (by continent)")
+```
+
+We can see that countries with higher `infant mortality rate` have lower `life_expectancy`, on average.
+
+- Correlation matrix for the numerical predictors we have in the datset:
+
+```{r fig.width=10, fig.height=10, fig.align="center", echo=FALSE, warning=FALSE, message=FALSE}
+library(reshape2)
+library(ggcorrplot)
+cor_mat <- round(cor(na.omit(raw_data[, !(names(raw_data) %in% c("year",
+"country", "continent", "status", "region"))])), 1)
+ggcorrplot(cor_mat, lab = TRUE)
+```
+
+We believe the visualizations/data analysis above gave us enough insights about the dataset we are dealing with and we can start with model building.
+
+***
+
+## Model Building
+
+Splitting the data in training and test set (`90%` training, `10%` hold out test set):
+
+```{r}
+set.seed(19851115)
+le_trn_data_idx  <- sample(nrow(cleaned_df), size = trunc(0.90 * nrow(cleaned_df)))
+le_trn_data <- cleaned_df[le_trn_data_idx, ]
+le_tst_data <- cleaned_df[-le_trn_data_idx, ]
+```
+
+Ignoring all the categorical variables for now (except `status`, we have fitted models using some of these categorical variables but couldn't get better results, code can be seen in Appendix)
+
+```{r}
+non_cat_predictor_df <- subset(le_trn_data, select = -c(year, country, continent, region))
+```
+
+We started with fitting a full Additive model (with all the numerical predictor and `status`). This will provide us with a good baseline model to do simple as well as more nuanced feature selections later
+
+```{r}
+full_additve_model <- lm(life_expectancy ~ ., data = non_cat_predictor_df)
+```
+
+- Summary of the full additive model
+
+```{r}
+summary(full_additve_model)
+```
+
+- Diagnostics plots for full additive model
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align="center"}
+par(mfrow = c(2, 2))
+plot(full_additve_model, col="orange")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Test $\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(full_additve_model, newdata = le_tst_data))`$
+- $R^2 = `r summary(full_additve_model)$r.squared`$
+- We can see that this model show that there are some non-significant predictors in the full model, for e.g. for `alcohol`, if we use t-test for significance:
+  - Null: $H_0:$ $\beta_{alcohol} = 0$
+  - Alternative: $H_0:$ $\beta_{alcohol} \neq 0$
+  - Test Statistics: $`r summary(full_additve_model)$coefficient["alcohol", "t value"]`$
+  - P-value: $`r summary(full_additve_model)$coefficient["alcohol", "Pr(>|t|)"]`$
+  - Decision: **Fail** to reject null
+  - Conclusion: `alcohol` does not have significant linear relationship with `life_expectancy`
+- Also, we can see from the diagnostic plots that both equal variance assumption and normality assumption are suspect.
+
+```{r echo=FALSE}
+results_df <- data.frame(
+  Model = "Full Additive Model",
+  Model_Var = "`full_additve_model`",
+  R_2   = summary(full_additve_model)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(full_additve_model, newdata = le_tst_data))
+)
+```
+
+So we started with simple (*not recommended*) method of removing some of the least significant predictors. Also, there seems to be high collinearity between `infant_deaths` and `under_5_deaths` (check `vif` below and `correlation plot` shown earlier).
+
+```{r}
+car::vif(full_additve_model)
+```
+
+So we removed some of the least significant predictor and kept `infant_deaths`
+
+```{r}
+sig_additive_model <- lm(life_expectancy ~  adult_mortality +
+                         infant_deaths + bmi + diphtheria + hiv_aids + gdp +
+                         income_composition_of_resources * status  + schooling,
+                       data = non_cat_predictor_df)
+```
+
+- Summary (Significant additive model `sig_additive_model`):
+
+```{r}
+summary(sig_additive_model)
+```
+
+- Diagnostic plot (Significant additive model `sig_additive_model`):
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align="center"}
+par(mfrow = c(2, 2))
+plot(sig_additive_model, col="orange")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Test-$\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(sig_additive_model, newdata = le_tst_data))`$.
+- $R^2 = `r summary(sig_additive_model)$r.squared`$.
+
+- Comparison with `full_additive_model`:
+
+```{r}
+anova(sig_additive_model, full_additve_model)
+```
+
+```{r echo=FALSE}
+results_df <- rbind(results_df, data.frame(
+  Model = "Significant Additive Model",
+  Model_Var = "`sig_additive_model`",
+  R_2   = summary(sig_additive_model)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(sig_additive_model, newdata = le_tst_data))
+))
+knitr::kable(results_df[c(1, 2), ], row.names = FALSE)
+```
+
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(full_additve_model, col = "orange", which = c(1,2), main = "Full Additive Model")
+plot(sig_additive_model, col = "deepskyblue", which = c(1,2), main = "Significant Additive Model")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- We can see that this procedure doesn't help us. Both $R^2$ and $\text{Test-RMSE}$ become worse. Assumptions are still suspect. Also, based on the $F$-test, smaller model (`sig_additive_model`) is **rejected**.
+
+Next we tried a pair-wise interactive model (based on the model above `sig_additive_model`)
+
+- Fitting the model
+
+```{r fig.align="center"}
+sig_interative_model <- lm(life_expectancy ~  (adult_mortality +
+                         under_five_deaths + bmi  + diphtheria + hiv_aids + gdp  +
+                         income_composition_of_resources + schooling) ^ 2 ,
+                       data = non_cat_predictor_df)
+```
+
+- Summary (Significant Interative Model `sig_interactive_model`):
+
+```{r}
+summary(sig_interative_model)
+```
+
+- Diagnostic Plots (Significant Interative Model `sig_interactive_model`):
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align="center"}
+par(mfrow = c(2, 2))
+plot(sig_interative_model, col="orange" )
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Test-$\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(sig_interative_model, newdata = le_tst_data))`$
+- $R^2 = `r summary(sig_interative_model)$r.squared`$
+
+- Comparision with Full Additive model (`full_additive_model`):
+
+```{r}
+anova(sig_interative_model, full_additve_model)
+```
+
+```{r echo=FALSE}
+results_df <- rbind(results_df, data.frame(
+  Model = "Significant Interactive Model",
+  Model_Var = "`sig_interative_model`",
+  R_2   = summary(sig_interative_model)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(sig_interative_model, newdata = le_tst_data))
+))
+knitr::kable(results_df[c(1, 3), ], row.names = FALSE)
+```
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(full_additve_model, col = "orange", which = c(1,2), main = "Full Additive Model")
+plot(sig_interative_model, col = "deepskyblue", which = c(1,2), main = "Significant Interactive Model")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- This model has improved $R^2$ and $\text{Test-RMSE}$ compared to `full_additive_model`, but we can see that assumptions are still suspect and $F$-test is still rejecting. But this can be a good candidate model, if we don't find any other model which is better performing and adhere to assumptions better.
+<p style="color:red; font-size:xx-small;">Note: We have tried AIC/BIC stepwise search with some of these interactive models and do get better $R^2$ and $\text{Test-RMSE}$ etc. but training time is extremely long, and due to time & resource constraints we focus most of our time on finding a model with reasonable training time and resource requirements. Please check out [Appendix], we do show there one of the AIC model based on an initial fully interactive model.</p>
+
+After the adhoc approaches we described above we tried more formal methods of variable selection. We started with **Stepwise** backward (AIC).
+
+- Stepwise search model (AIC):
+
+```{r}
+# Set the trace = 0, to avoid printing all the steps traces, it can be easily
+# set to 1, if spmeone wants to see step traces 
+aic_back_full_additive <-
+  step(full_additve_model, direction = "backward",
+       data = non_cat_predictor_df, trace = 0)
+extractAIC(aic_back_full_additive)
+```
+
+- Summary of AIC-backward model:
+
+```{r}
+summary(aic_back_full_additive)
+```
+
+- Diagnostic plots (AIC - backward model):
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align="center"}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive, col = "orange")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Test-$\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive, newdata = le_tst_data))`$
+- $R^2 = `r summary(aic_back_full_additive)$r.squared`$
+
+- Comparison to Full additive model (`full_additive_model`):
+
+```{r}
+anova(aic_back_full_additive, full_additve_model)
+```
+
+```{r echo=FALSE}
+results_df <- rbind(results_df, data.frame(
+  Model = "AIC Backward (based on full additive model)",
+  Model_Var = "`aic_back_full_additive`",
+  R_2   = summary(aic_back_full_additive)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive, newdata = le_tst_data))
+))
+knitr::kable(results_df[c(1,4),], row.names = FALSE)
+```
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(full_additve_model, col = "orange", which = c(1,2), main = "Full Additive Model")
+plot(aic_back_full_additive, col = "deepskyblue", which = c(1,2), main = "AIC (backward) Model")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- In comparison to full additive model, this stepwise (AIC) model has slightly lower $R^2$ and $\text{Test-RMSE}$ and almost similar looking `Residuals v. Fitted` and `Normal Q-Q` plots, but $F$-test **failed** to reject, so we picked this model to experiment with some transformation to see if we can improve the performance of the model.
+<p style="color:tomato;font-size:xx-small">Note: We have also build a model using BIC stepwise search. It was giving us an almost similar result, so we move ahead with this model, but BIC based models and further transformation that we tried can be seen in the [Appendix].</p>
+
+Before starting with the application of some transformations, we have also taken a look at how predictors and response are distributed
+
+```{r pair-block, fig.width=12, fig.height=12, fig.align="center", echo=FALSE, cache=TRUE}
+pairs(subset(non_cat_predictor_df, select = c(life_expectancy, adult_mortality, infant_deaths, bmi,
+                                     under_five_deaths, total_expenditure, diphtheria, hiv_aids,
+                                     gdp, thinness_1_19_years, income_composition_of_resources,
+                                     schooling)), col = "chartreuse4")
+```
+
+We first started with adding `log` transformation to the predictors
+
+```{r}
+aic_back_full_additive_model_all_log <- 
+  lm (life_expectancy ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + log1p(diphtheria) + log1p(hiv_aids) + log1p(gdp) + log1p(thinness_1_19_years) +
+      log1p(income_composition_of_resources) + log1p(schooling), data = non_cat_predictor_df)
+```
+
+```{r}
+summary(aic_back_full_additive_model_all_log)
+```
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_all_log, col = "orange")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Test-$\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive_model_all_log, newdata = le_tst_data))`$
+- $R^2 = `r summary(aic_back_full_additive_model_all_log)$r.squared`$
+
+- Comparison with simple non-transformed `aic_back_full_additive` model:
+
+```{r echo=FALSE}
+results_df <- rbind(results_df, data.frame(
+  Model = "AIC Backward with predictor-log-transform",
+  Model_Var = "`aic_back_full_additive_model_all_log`",
+  R_2   = summary(aic_back_full_additive_model_all_log)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive_model_all_log, newdata = le_tst_data))
+))
+knitr::kable(results_df[c(4,5),], row.names = FALSE)
+```
+
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive, col = "orange", which = c(1,2), main = "AIC Model")
+plot(aic_back_full_additive_model_all_log, col = "deepskyblue", which = c(1,2), main = "AIC Model - Log Transformed")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Both $R^2$ and $\text{Test-RMSE}$ has improved. Also, `Residual v. Fitted` and `Normal Q-Q` plots are looking much better, which indicates that this model adheres to equal variance & normality assumptions much better compared to non-tranformed AIC model.
+
+We have tried various different combination of having log transformation on some predictors and not on other predictors (all those experiments are not included in this report or rmd) and we get one of the following which improved performance.
+
+```{r}
+aic_back_full_additive_model_log <- 
+  lm (life_expectancy ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + diphtheria + log1p(hiv_aids) + gdp + thinness_1_19_years +
+      income_composition_of_resources + schooling, data = non_cat_predictor_df)
+
+```
+
+- Summary (AIC Model - Some predictors log transformed)
+```{r}
+summary(aic_back_full_additive_model_log)
+```
+
+- Diagnostic Plots (AIC Model - Some predictors log transformed)
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log, col = "orange")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Test-$\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive_model_log, newdata = le_tst_data))`$
+- $R^2 = `r summary(aic_back_full_additive_model_log)$r.squared`$
+
+- Comparison with all predictors LOG transformed `aic_back_full_additive_model_all_log` model:
+
+```{r echo=FALSE}
+results_df <- rbind(results_df, data.frame(
+  Model = "AIC Backward with some predictor-log-transform",
+  Model_Var = "`aic_back_full_additive_model_log`",
+  R_2   = summary(aic_back_full_additive_model_log)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive_model_log, newdata = le_tst_data))
+))
+knitr::kable(results_df[c(4, 5, 6),], row.names = FALSE)
+```
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_all_log, col = "orange", which = c(1,2), main = "AIC Model - Log Transformed")
+plot(aic_back_full_additive_model_log, col = "deepskyblue", which = c(1,2), main = "AIC Model - Some Log Transformed")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- We can see this (*with only some predictors log transformed*) model performs much better. Both $R^2$ and $\text{Test-RMSE}$ improved. Also, both `Residuals v. Fitted` and `Normal Q-Q` plots are still looking fine. Hence this model seems to be an improvement over the model with all predictors LOG transformed.
+
+Finally, we tried to add some ploynomial terms for some of the predictors (here also we tried bunch of different models not included in the report) and found one which improves the performance.
+
+```{r}
+aic_back_full_additive_model_log_poly <- 
+  lm (life_expectancy ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + diphtheria + log1p(hiv_aids) + log1p(gdp) + thinness_1_19_years +
+      income_composition_of_resources + I(income_composition_of_resources ^ 2)
+      + schooling + I(schooling ^ 2), data = non_cat_predictor_df)
+```
+
+- Summary (AIC Model - Some predictors log transformed and some polynomial terms)
+
+```{r}
+summary(aic_back_full_additive_model_log_poly)
+```
+
+- Diagnostics (AIC Model - Some predictors log transformed and some polynomial terms)
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log_poly, col = "orange")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- Comparison with AIC Model - Some predictors log transformed (`aic_back_full_additive_model_log`):
+```{r}
+anova(aic_back_full_additive_model_log, aic_back_full_additive_model_log_poly)
+```
+
+```{r echo=FALSE}
+results_df <- rbind(results_df, data.frame(
+  Model = "AIC (with some log and poly terms)",
+  Model_Var = "`aic_back_full_additive_model_log_poly`",
+  R_2   = summary(aic_back_full_additive_model_log_poly)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive_model_log_poly, newdata = le_tst_data))
+))
+knitr::kable(results_df[c(5, 6, 7),], row.names = FALSE)
+```
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log, col = "orange", which = c(1,2), main = "AIC Model - Some Log Transformed")
+plot(aic_back_full_additive_model_log_poly, col = "deepskyblue", which = c(1,2), main = "AIC Model - Log & Poly")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- We can see that both $R^2$ and $\text{Test-RMSE}$ improved. Also, based on the $F$-test, **null is rejected**, hence this bigger model with polynomial terms should be selected.
+
+- We can also compare this model to the interactive model `sig_interative_model` where we achieved the high $R^2$ and low $\text{Test-RMSE}$:
+
+```{r fig.align="center", echo=FALSE}
+knitr::kable(results_df[c(3, 7),], row.names = FALSE)
+par(mfrow = c(2,2))
+plot(sig_interative_model, col = "chartreuse3", which = c(1,2), main = "Significant Interactive Model")
+plot(aic_back_full_additive_model_log_poly, col = "deepskyblue", which = c(1,2), main = "AIC Model - Log & Poly")
+box("outer", col="grey",  lwd = 5) 
+```
+
+We can see this (`aic_back_full_additive_model_log_poly`) model has slightly better $R^2$ and slightly underperforming $\text{Test-RMSE}$ but both `Residuals v. Fitted` and especially `Normal Q-Q` plots are looking better. So, we can safely assume that `aic_back_full_additive_model_log_poly` is one of the best model we experimented with as part of this project.
+<p style="color:red; font-size:xx-small;">Note: We do believe that it is definitelt possible to find an even better performing model and infact in [Appendix] we have shown once such model, but considering time, scope & resource constraints we felt that this model is good enough for the purpose of our project at hand.</p>
+
+By looking at diagnostics plots for all the model we experimented with, one thing we notice that there are some outliers which are affecting our models. So we tried one last thing of removing the outlier and fitting the best model (`aic_back_full_additive_model_log_poly`) we selected on the cleaned training data.
+
+- Removing outliers:
+
+```{r echo=FALSE, fig.align="center"}
+boxplot(non_cat_predictor_df$life_expectancy, ylab = "Life Expectancy (Age)", main = "Before Outliers removed")
+```
+
+```{r}
+nrow(non_cat_predictor_df)
+outliers_out <- boxplot(non_cat_predictor_df$life_expectancy, plot = F)$out
+life_clean <-
+  non_cat_predictor_df[-which(non_cat_predictor_df$life_expectancy %in% outliers_out), ]
+nrow(life_clean)
+```
+
+```{r echo=FALSE, fig.align="center"}
+boxplot(life_clean$life_expectancy, ylab = "Life Expectancy (Age)", main = "After Outliers removed") #
+```
+
+- Fitting the model on cleaned dataset:
+
+```{r}
+aic_back_full_additive_model_log_poly_no_out <- 
+  lm (life_expectancy ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + diphtheria + log1p(hiv_aids) + log1p(gdp) + thinness_1_19_years +
+      income_composition_of_resources + I(income_composition_of_resources ^ 2)
+      + schooling + I(schooling ^ 2), data = life_clean)
+
+```
+
+- Summary (AIC Model - Some predictors log transformed and some polynomial terms) with cleaned dataset:
+
+```{r}
+summary(aic_back_full_additive_model_log_poly_no_out)
+```
+
+- Diagnostics (AIC Model - Some predictors log transformed and some polynomial terms) with cleaned dataset:
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log_poly_no_out, col = "orange")
+box("outer", col="grey",  lwd = 5) 
+```
+
+
+- Comparison of models build on full vs cleaned (outlier removed) dataset:
+
+```{r echo=FALSE}
+results_df <- rbind(results_df, data.frame(
+  Model = "AIC (Log & Poly) - outlier removed",
+  Model_Var = "`aic_back_full_additive_model_log_poly_no_out`",
+  R_2   = summary(aic_back_full_additive_model_log_poly_no_out)$r.squared,
+  Test_RMSE = calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive_model_log_poly_no_out, newdata = le_tst_data))
+))
+knitr::kable(results_df[c(7, 8),], row.names = FALSE)
+```
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log_poly, col = "orange", which = c(1,2), main = "Log & Poly Model")
+plot(aic_back_full_additive_model_log_poly_no_out, col = "deepskyblue", which = c(1,2), main = "Log & Poly Model (No outlier)")
+box("outer", col="grey",  lwd = 5) 
+```
+
+- As expected removing outlier does help in improving $R^2$ but increased the $\text{Test-RMSE}$. The `Residual v. Fitted` and `Normal Q-Q` plots are looking fine (lower tail in `Normal Q-Q` plot is much shorter). Overall, we do not see much improvement by removing outliers. Also, we felt that the outliers, in our case, seems to be valid observations (as per our understanding of the dataset), hence outlier removal seems not worth the risk.
+
+So, in the end the final model that we picked is the model we got using AIC stepwise backward search on full additive model and then transformed some predictors using LOG transformation and then added some higher degree polynomial terms, i.e. `aic_back_full_additive_model_log_poly`. We have presented the combined performance results in the **Results** section below . We have already presented most of the results in this (**Methods and Results**) section, so in **Result** section we will again present the  diagnostic plots for the final model that we have picked (`aic_back_full_additive_model_log_poly`).
+
+***
+
+# Results
+
+**Performance results for all the models we experimented with as part of this project**
+
+```{r echo=FALSE}
+knitr::kable(results_df)
+```
+
+**Summary for the best model (`aic_back_full_additive_model_log_poly`)**
+
+```{r}
+summary(aic_back_full_additive_model_log_poly)
+```
+
+**Diagnostic plots for the best model that we have picked (`aic_back_full_additive_model_log_poly`)**
+
+```{r fig.align="center", echo=FALSE}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log_poly, col = "orange")
+box("outer", col="chartreuse4",  lwd = 5) 
+```
+
+**Performance Metrics for best model**
+
+- Test-$\mathbf{\text{RMSE}} = `r calc_rmse(le_tst_data$life_expectancy, predict(aic_back_full_additive_model_log_poly, newdata = le_tst_data))`$
+- $R^2 = `r summary(aic_back_full_additive_model_log_poly)$r.squared`$
+
+***
+
+# Discussion
+
+## Model Building and Results
+
+## Data Analysis and exploration
+
+## Conclusion
+
+
+# Appendix
+
+#### Stepwise search using full interactive model as initial model (***disabled**, if you want to see please enable it from the RMD file*)
+
+```{r eval=FALSE}
+full_interactive_model <- lm(life_expectancy ~ . ^ 2, data = non_cat_predictor_df)
+aic_back_full_interactive <- step(full_interactive_model, direction = "backward",
+                                  data = non_cat_predictor_df, trace = 0) 
+summary(aic_back_full_interactive)
+par(mfrow = c(2,2))
+plot(aic_back_full_interactive, col = "orange")
+anova(aic_back_full_interactive, full_interactive_model)
+```
+
+#### Experimental model where we have tried building a pair-wise interactive model of the log-poly model that we got in the Methods section fitted on dataset.
+
+```{r}
+aic_back_full_additive_model_log_poly_interactive <- 
+  lm (life_expectancy ~ (status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + diphtheria + log1p(hiv_aids) + log1p(gdp) + thinness_1_19_years +
+      income_composition_of_resources + I(income_composition_of_resources ^ 2)
+      + schooling + I(schooling ^ 2)) ^ 2, data = non_cat_predictor_df)
+```
+
+```{r}
+summary(aic_back_full_additive_model_log_poly_interactive)
+```
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log_poly_interactive, col = "orange")
+```
+
+```{r}
+calc_rmse(le_tst_data$life_expectancy,
+          predict(aic_back_full_additive_model_log_poly_interactive, newdata = le_tst_data))
+```
+
+#### Stepwise search using pair-wise interactive model based on final model that we have choosen (`aic_back_full_additive_model_log_poly`) as initial model (***disabled**, if you want to see please enable it from the RMD file*)
+
+```{r eval=FALSE}
+aic_back_full_interactive <- step(aic_back_full_additive_model_log_poly_interactive, direction = "backward", data = non_cat_predictor_df, trace = 0) 
+summary(aic_back_full_interactive)
+par(mfrow = c(2,2))
+plot(aic_back_full_interactive, col = "orange")
+anova(aic_back_full_interactive, full_interactive_model)
+```
+
+#### Based on the above search, we fitted the aic model (we get above)
+
+```{r}
+aic_back_log_poly <- lm(life_expectancy ~ status + 
+                                 log1p(adult_mortality) + log1p(infant_deaths) + 
+    log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) +
+    log1p(under_five_deaths) + log1p(polio) + diphtheria + log1p(hiv_aids) +
+    log1p(gdp) + thinness_1_19_years + income_composition_of_resources +
+    I(income_composition_of_resources^2) + schooling + I(schooling^2) +
+    status:log1p(adult_mortality) + status:log1p(infant_deaths) +
+    status:log1p(measles) + status:thinness_1_19_years + status:income_composition_of_resources +
+    status:I(income_composition_of_resources^2) + status:schooling +
+    status:I(schooling^2) + log1p(adult_mortality):log1p(measles) +
+    log1p(adult_mortality):log1p(hiv_aids) + log1p(adult_mortality):log1p(gdp) +
+    log1p(adult_mortality):thinness_1_19_years + log1p(adult_mortality):income_composition_of_resources +
+    log1p(adult_mortality):I(income_composition_of_resources^2) +
+    log1p(adult_mortality):schooling + log1p(infant_deaths):log1p(percentage_expenditure) +
+    log1p(infant_deaths):log1p(measles) + log1p(infant_deaths):log1p(hiv_aids) +
+    log1p(infant_deaths):log1p(gdp) + log1p(infant_deaths):schooling +
+    log1p(infant_deaths):I(schooling^2) + log1p(percentage_expenditure):log1p(measles) +
+    log1p(percentage_expenditure):log1p(bmi) + log1p(percentage_expenditure):log1p(polio) +
+    log1p(percentage_expenditure):diphtheria + log1p(percentage_expenditure):schooling +
+    log1p(percentage_expenditure):I(schooling^2) + log1p(measles):log1p(bmi) +
+    log1p(measles):log1p(under_five_deaths) + log1p(measles):log1p(gdp) +
+    log1p(measles):thinness_1_19_years + log1p(measles):income_composition_of_resources +
+    log1p(measles):I(income_composition_of_resources^2) + log1p(bmi):diphtheria +
+    log1p(bmi):log1p(hiv_aids) + log1p(bmi):I(schooling^2) +
+    log1p(under_five_deaths):log1p(polio) + log1p(under_five_deaths):diphtheria +
+    log1p(under_five_deaths):log1p(hiv_aids) + log1p(under_five_deaths):log1p(gdp) +
+    log1p(under_five_deaths):thinness_1_19_years + log1p(under_five_deaths):income_composition_of_resources +
+    log1p(under_five_deaths):schooling + log1p(under_five_deaths):I(schooling^2) +
+    log1p(polio):schooling + log1p(polio):I(schooling^2) + diphtheria:log1p(hiv_aids) +
+    diphtheria:log1p(gdp) + log1p(hiv_aids):log1p(gdp) + log1p(hiv_aids):thinness_1_19_years +
+    log1p(hiv_aids):income_composition_of_resources + log1p(hiv_aids):I(income_composition_of_resources^2) +
+    log1p(hiv_aids):I(schooling^2) + log1p(gdp):income_composition_of_resources +
+    thinness_1_19_years:income_composition_of_resources + thinness_1_19_years:I(income_composition_of_resources^2) +
+    income_composition_of_resources:I(income_composition_of_resources^2) +
+    income_composition_of_resources:I(schooling^2) + I(income_composition_of_resources^2):I(schooling^2) +
+    schooling:I(schooling^2), data = non_cat_predictor_df)
+```
+
+Summary:
+
+```{r}
+summary(aic_back_log_poly)
+```
+
+Diagnostic:
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(aic_back_log_poly, col = "orange")
+```
+
+RMSE:
+```{r warning=FALSE, message=FALSE}
+calc_rmse(le_tst_data$life_expectancy,
+          predict(aic_back_log_poly, newdata = le_tst_data))
+```
+
+
+#### BIC model based on full additive model:
+
+```{r}
+bic_back_full_additive <- step(full_additve_model, direction = "backward",
+                               k = log(nrow(non_cat_predictor_df)), data = non_cat_predictor_df) 
+```
+
+```{r}
+summary(bic_back_full_additive)
+```
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(bic_back_full_additive, col = "orange")
+```
+
+```{r}
+anova(bic_back_full_additive, full_additve_model)
+```
+
+```{r}
+bic_back_full_additive_log <- lm(
+  life_expectancy ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+    log1p(bmi) + log1p(under_five_deaths) + log1p(polio) + diphtheria + log1p(hiv_aids) +
+    gdp + thinness_1_19_years + income_composition_of_resources +
+    schooling, data = non_cat_predictor_df
+)
+```
+
+```{r}
+summary(bic_back_full_additive_log)
+```
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(bic_back_full_additive_log, col = "orange")
+```
+
+```{r}
+anova(aic_back_full_additive_model_log, bic_back_full_additive_log)
+calc_rmse(le_tst_data$life_expectancy,
+          predict(aic_back_full_additive_model_log, newdata = le_tst_data))
+calc_rmse(le_tst_data$life_expectancy,
+          predict(bic_back_full_additive_log, newdata = le_tst_data))
+```
+
+
+#### Experiment with removing extreme values of `life_expectancy` in addition of `outliers`
+
+```{r}
+life_clean1 <- life_clean[-which(life_clean$life_expectancy < 50 | life_clean$life_expectancy > 95), ]
+nrow(life_clean1)
+```
+
+```{r}
+aic_back_full_additive_model_log_poly_no_extremes <- 
+  lm (life_expectancy ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + diphtheria + log1p(hiv_aids) + log1p(gdp) + thinness_1_19_years +
+      income_composition_of_resources + I(income_composition_of_resources ^ 2)
+      + schooling + I(schooling ^ 2), data = life_clean1)
+
+```
+
+```{r}
+summary(aic_back_full_additive_model_log_poly_no_extremes)
+```
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log_poly_no_extremes, col = "orange")
+```
+
+```{r}
+# anova(aic_back_full_additive_model_log_poly, aic_back_full_additive_model_log_poly_no_out)
+calc_rmse(le_tst_data$life_expectancy,
+          predict(aic_back_full_additive_model_log_poly_no_extremes, newdata = le_tst_data))
+```
+
+#### Experiment with `regsubsets` to figure out the best additive model. This technique can be helpful to find a smaller yet performant model.
+
+```{r}
+library(leaps)
+regs <- regsubsets(life_expectancy ~ ., data = life_clean, nbest=10)
+par(mar = c(10, 4.1, 4.1, 2.1))
+plot(regs, 
+     scale="adjr", 
+     main="All possible regression: ranked by Adjusted R-squared")
+```
+
+
+#### BIC based log-poly model
+
+```{r}
+bic_back_full_additive_model_log_poly <- 
+  lm (life_expectancy ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + diphtheria + log1p(hiv_aids) + log1p(gdp) + thinness_1_19_years +
+      income_composition_of_resources + I(income_composition_of_resources ^ 2)
+      + schooling + I(schooling ^ 2), data = non_cat_predictor_df)
+
+```
+
+```{r}
+summary(bic_back_full_additive_model_log_poly)
+```
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(bic_back_full_additive_model_log_poly, col = "orange")
+```
+
+```{r}
+anova(aic_back_full_additive_model_log_poly, bic_back_full_additive_model_log_poly)
+calc_rmse(le_tst_data$life_expectancy,
+          predict(aic_back_full_additive_model_log_poly, newdata = le_tst_data))
+calc_rmse(le_tst_data$life_expectancy,
+          predict(bic_back_full_additive_model_log_poly, newdata = le_tst_data))
+```
+
+
+#### Response LOG transform:
+
+```{r}
+aic_back_full_additive_model_log_poly_log <- 
+  lm (log(life_expectancy) ~ status + log1p(adult_mortality) + log1p(infant_deaths) + 
+      log1p(percentage_expenditure) + log1p(measles) + log1p(bmi) + log1p(under_five_deaths) +
+      log1p(polio) + diphtheria + log1p(hiv_aids) + log1p(gdp) + thinness_1_19_years +
+      income_composition_of_resources + I(income_composition_of_resources ^ 2)
+      + schooling + I(schooling ^ 2), data = non_cat_predictor_df)
+
+```
+
+```{r}
+summary(aic_back_full_additive_model_log_poly_log)
+```
+
+```{r fig.align="center"}
+par(mfrow = c(2,2))
+plot(aic_back_full_additive_model_log_poly_log, col = "orange")
+```
+
+```{r}
+calc_rmse(le_tst_data$life_expectancy,
+          exp(predict(aic_back_full_additive_model_log_poly_log, newdata = le_tst_data)))
+```
