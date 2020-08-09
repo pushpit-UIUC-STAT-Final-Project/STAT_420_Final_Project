@@ -2,7 +2,6 @@
 title: "Predicting Life Expectancy: How long people live? Why? Why not?"
 subtitle: "STAT 420, Summer 2020"
 author: "Pushpit Saxena(netid: pushpit2) & Venslaus Prakash Arokiaraj (netid: vpa2)"
-date: 'July 18th, 2020'
 output:
   html_document: 
     theme: readable
@@ -153,14 +152,13 @@ calc_rmse<- function(actual, predicted) {
 
 ```{r}
 col_names <- tolower(trimws(str_replace_all(colnames(raw_data), "\\.+", "_")))
-# col_names <- tolower(str_replace_all(colnames(raw_data), "\\s+", ""))
 colnames(raw_data) <- col_names
 ```
 
 **Snippet of the raw dataset:**
 
-```{r}
-tibble::as.tibble(raw_data)
+```{r warning=FALSE}
+tibble::as_tibble(raw_data)
 ```
 
 **Summary of `numeric` fields:**
@@ -236,7 +234,7 @@ knitr::kable(dd)
 
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE}
-ggplot(data = raw_data, aes(x = continent, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Continent")
+ggplot(data = raw_data, aes(x = continent, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Continent") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Looking at the statistics and plot above, we can clearly see that countries in the **African** continent has some of the lowest Life expectancy values among all the other countries. One thing we also noticed that there are less observations for **North American** countries.
@@ -245,14 +243,14 @@ Looking at the statistics and plot above, we can clearly see that countries in t
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE}
 library(ggplot2)
 ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = year)) +
-  ggtitle("Life Expectancy by Year")
+  ggtitle("Life Expectancy by Year") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can that on average the `life_expectancy` is improving over the years. 
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 library(ggplot2)
-ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Year & Continent")
+ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Year & Continent") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Again, we can see that **African** countries have some of the lowest `life_expectancy` values over the years and **European** countries have some of the highest `life_expectancy` values.
@@ -260,21 +258,21 @@ Again, we can see that **African** countries have some of the lowest `life_expec
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 library(ggplot2)
 ggplot(data = raw_data, aes(x = life_expectancy, y = log(gdp))) +
-  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. GDP (by continent)")
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. GDP (by continent)") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can see that countries with lower `gdp` generally have lower `life_expectancy`.
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 ggplot(data = raw_data, aes(x = life_expectancy, y = log(hiv_aids))) +
-  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. HIV AIDS (by continent)")
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. HIV AIDS (by continent)") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can see that countries with high `HIV Aids` cases generally have lower `life_expectancy`, on average.
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 ggplot(data = raw_data, aes(x = life_expectancy, y = log(infant_deaths))) +
-  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. Infant Deaths (by continent)")
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. Infant Deaths (by continent)") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can see that countries with higher `infant mortality rate` have lower `life_expectancy`, on average.
@@ -286,7 +284,7 @@ library(reshape2)
 library(ggcorrplot)
 cor_mat <- round(cor(na.omit(raw_data[, !(names(raw_data) %in% c("year",
 "country", "continent", "status", "region"))])), 1)
-ggcorrplot(cor_mat, lab = TRUE)
+ggcorrplot(cor_mat, lab = TRUE) + ggtitle("Correlation Matrix") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We believe the visualizations/data analysis above gave us enough insights about the dataset we are dealing with and we can start with model building.
