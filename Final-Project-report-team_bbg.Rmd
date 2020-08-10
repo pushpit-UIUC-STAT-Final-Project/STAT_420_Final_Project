@@ -1,8 +1,7 @@
 ---
 title: "Predicting Life Expectancy: How long people live? Why? Why not?"
-subtitle: "STAT 420, Summer 2020"
-author: "Pushpit Saxena(netid: pushpit2) & Venslaus Prakash Arokiaraj (netid: vpa2)"
-date: 'July 18th, 2020'
+subtitle: "Final Project: STAT 420, Summer 2020"
+author: "Team: Pushpit Saxena(netid: pushpit2) & Venslaus Prakash Arokiaraj (netid: vpa2)"
 output:
   html_document: 
     theme: readable
@@ -31,6 +30,9 @@ Size: **`2`**
 | Pushpit Saxena             | `pushpit2`   |
 | Venslaus Prakash Arokiaraj | `vpa2`       |
 
+<p style="color:tomato; font-size:xx-small">Note: We have submitted an interim report on coursera, but this report should be considered our final report. We do get an extension approved by Prof. David. Please see [this](ExtensionConfirmation.pdf) for details on approval of extension.</p>
+
+***
 
 # Introduction
 
@@ -84,6 +86,10 @@ Following are some of the important variables used in this dataset:
 
 - **`Population`** (Int): Population of the country
 
+- **`Schooling`** (Int): Number of years of Schooling(years)
+
+- **`Income Composition of Resources`** (Decimal): Human Development Index in terms of income composition of resources (index ranging from 0 to 1).
+
 ## Project Goals
 
 - From a research standpoint, one of the primary reason for us to pick this dataset is the size as well as variety of predictors that are available. We believe that this dataset is perfect for us to practice and implement majority of the techniques we have learned as part of the course and get a hands-on experience on a real life dataset. As part of this project (see [Methods and Results]), we tried to utilize the knowledge and techniques we have learned as part of this course. Some of the things we will explore are:
@@ -104,7 +110,7 @@ Following are some of the important variables used in this dataset:
 
 <p style="color:#FF6347;font-size:xx-small">Note: We have grouped the <b>Methods</b> and <b>Results</b> sections together, as it is more convenient to demostrate the flow of our research to build the model. We do also have a separate <b>Results</b> section showing the combined results of all the model we experiment with. Also, that section show detailed information and plots for final model.</p>
 
-## Data Cleaning:
+## Data Cleaning
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyr)
@@ -153,14 +159,13 @@ calc_rmse<- function(actual, predicted) {
 
 ```{r}
 col_names <- tolower(trimws(str_replace_all(colnames(raw_data), "\\.+", "_")))
-# col_names <- tolower(str_replace_all(colnames(raw_data), "\\s+", ""))
 colnames(raw_data) <- col_names
 ```
 
 **Snippet of the raw dataset:**
 
-```{r}
-tibble::as.tibble(raw_data)
+```{r warning=FALSE}
+tibble::as_tibble(raw_data)
 ```
 
 **Summary of `numeric` fields:**
@@ -236,7 +241,7 @@ knitr::kable(dd)
 
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE}
-ggplot(data = raw_data, aes(x = continent, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Continent")
+ggplot(data = raw_data, aes(x = continent, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Continent") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Looking at the statistics and plot above, we can clearly see that countries in the **African** continent has some of the lowest Life expectancy values among all the other countries. One thing we also noticed that there are less observations for **North American** countries.
@@ -245,14 +250,14 @@ Looking at the statistics and plot above, we can clearly see that countries in t
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE}
 library(ggplot2)
 ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = year)) +
-  ggtitle("Life Expectancy by Year")
+  ggtitle("Life Expectancy by Year") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can that on average the `life_expectancy` is improving over the years. 
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 library(ggplot2)
-ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Year & Continent")
+ggplot(data = raw_data, aes(x = year, y = life_expectancy)) + geom_boxplot(aes(fill = continent)) + ggtitle("Life Expectancy by Year & Continent") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Again, we can see that **African** countries have some of the lowest `life_expectancy` values over the years and **European** countries have some of the highest `life_expectancy` values.
@@ -260,21 +265,21 @@ Again, we can see that **African** countries have some of the lowest `life_expec
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 library(ggplot2)
 ggplot(data = raw_data, aes(x = life_expectancy, y = log(gdp))) +
-  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. GDP (by continent)")
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. GDP (by continent)") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can see that countries with lower `gdp` generally have lower `life_expectancy`.
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 ggplot(data = raw_data, aes(x = life_expectancy, y = log(hiv_aids))) +
-  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. HIV AIDS (by continent)")
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. HIV AIDS (by continent)") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can see that countries with high `HIV Aids` cases generally have lower `life_expectancy`, on average.
 
 ```{r echo=FALSE, fig.align="center", warning=FALSE, message=FALSE, fig.width=10}
 ggplot(data = raw_data, aes(x = life_expectancy, y = log(infant_deaths))) +
-  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. Infant Deaths (by continent)")
+  geom_point(aes(shape = continent, color = continent)) + ggtitle("Life Expectancy v. Infant Deaths (by continent)") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We can see that countries with higher `infant mortality rate` have lower `life_expectancy`, on average.
@@ -286,7 +291,7 @@ library(reshape2)
 library(ggcorrplot)
 cor_mat <- round(cor(na.omit(raw_data[, !(names(raw_data) %in% c("year",
 "country", "continent", "status", "region"))])), 1)
-ggcorrplot(cor_mat, lab = TRUE)
+ggcorrplot(cor_mat, lab = TRUE) + ggtitle("Correlation Matrix") + theme(plot.title = element_text(hjust = 0.5))
 ```
 
 We believe the visualizations/data analysis above gave us enough insights about the dataset we are dealing with and we can start with model building.
@@ -459,7 +464,7 @@ plot(sig_interative_model, col = "deepskyblue", which = c(1,2), main = "Signific
 box("outer", col="grey",  lwd = 5) 
 ```
 
-- This model has improved $R^2$ and $\text{Test-RMSE}$ compared to `full_additive_model`, but we can see that assumptions are still suspect and $F$-test is still rejecting. But this can be a good candidate model, if we don't find any other model which is better performing and adhere to assumptions better.
+- This model has improved $R^2$ and $\text{Test-RMSE}$ compared to `full_additive_model`, but we can see that assumptions are still suspect. But this can be a good candidate model, if we cannot find any other model which is better performing and adhere to assumptions better.
 <p style="color:red; font-size:xx-small;">Note: We have tried AIC/BIC stepwise search with some of these interactive models and do get better $R^2$ and $\text{Test-RMSE}$ etc. but training time is extremely long, and due to time & resource constraints we focus most of our time on finding a model with reasonable training time and resource requirements. Please check out [Appendix], we do show there one of the AIC model based on an initial fully interactive model.</p>
 
 After the adhoc approaches we described above we tried more formal methods of variable selection. We started with **Stepwise** backward (AIC).
@@ -468,7 +473,7 @@ After the adhoc approaches we described above we tried more formal methods of va
 
 ```{r}
 # Set the trace = 0, to avoid printing all the steps traces, it can be easily
-# set to 1, if spmeone wants to see step traces 
+# set to 1, if someone wants to see step traces 
 aic_back_full_additive <-
   step(full_additve_model, direction = "backward",
        data = non_cat_predictor_df, trace = 0)
@@ -572,7 +577,7 @@ box("outer", col="grey",  lwd = 5)
 
 - Both $R^2$ and $\text{Test-RMSE}$ has improved. Also, `Residual v. Fitted` and `Normal Q-Q` plots are looking much better, which indicates that this model adheres to equal variance & normality assumptions much better compared to non-tranformed AIC model.
 
-We have tried various different combination of having log transformation on some predictors and not on other predictors (all those experiments are not included in this report or rmd) and we get one of the following which improved performance.
+We have tried various different combination of having log transformation on some predictors and not on other predictors (*all those experiments are not included in this report or rmd mainly to avoid clutter*) and we get one of the following which improved performance.
 
 ```{r}
 aic_back_full_additive_model_log <- 
@@ -620,7 +625,7 @@ box("outer", col="grey",  lwd = 5)
 
 - We can see this (*with only some predictors log transformed*) model performs much better. Both $R^2$ and $\text{Test-RMSE}$ improved. Also, both `Residuals v. Fitted` and `Normal Q-Q` plots are still looking fine. Hence this model seems to be an improvement over the model with all predictors LOG transformed.
 
-Finally, we tried to add some ploynomial terms for some of the predictors (here also we tried bunch of different models not included in the report) and found one which improves the performance.
+Finally, we tried to add some ploynomial terms for some of the predictors (*here also we tried bunch of different models, not included in the report mainly to avoid clutter*) and found one which improves the performance.
 
 ```{r}
 aic_back_full_additive_model_log_poly <- 
@@ -666,7 +671,7 @@ plot(aic_back_full_additive_model_log_poly, col = "deepskyblue", which = c(1,2),
 box("outer", col="grey",  lwd = 5) 
 ```
 
-- We can see that both $R^2$ and $\text{Test-RMSE}$ improved. Also, based on the $F$-test, **null is rejected**, hence this bigger model with polynomial terms should be selected.
+- We can see that both $R^2$ and $\text{Test-RMSE}$ improved. Also, based on the $F$-test, **null is rejected**, hence this bigger model with polynomial terms is preferred.
 
 - We can also compare this model to the interactive model `sig_interative_model` where we achieved the high $R^2$ and low $\text{Test-RMSE}$:
 
@@ -679,7 +684,7 @@ box("outer", col="grey",  lwd = 5)
 ```
 
 We can see this (`aic_back_full_additive_model_log_poly`) model has slightly better $R^2$ and slightly underperforming $\text{Test-RMSE}$ but both `Residuals v. Fitted` and especially `Normal Q-Q` plots are looking better. So, we can safely assume that `aic_back_full_additive_model_log_poly` is one of the best model we experimented with as part of this project.
-<p style="color:red; font-size:xx-small;">Note: We do believe that it is definitelt possible to find an even better performing model and infact in [Appendix] we have shown once such model, but considering time, scope & resource constraints we felt that this model is good enough for the purpose of our project at hand.</p>
+<p style="color:red; font-size:xx-small;">Note: We do believe that it is definitelt possible to find an even better performing model and infact in [Appendix] we have shown once such model, but considering time, scope & resource constraints we felt that this model is good enough for the purpose of the project at hand and goals that we have set for ourselves.</p>
 
 By looking at diagnostics plots for all the model we experimented with, one thing we notice that there are some outliers which are affecting our models. So we tried one last thing of removing the outlier and fitting the best model (`aic_back_full_additive_model_log_poly`) we selected on the cleaned training data.
 
@@ -786,10 +791,41 @@ box("outer", col="chartreuse4",  lwd = 5)
 
 ## Model Building and Results
 
+As we can see throughout the model building and training process, that finding a better model is an iterative process. There can't be a single metric that decides the viability and efficacy of a model. We have been cognizant of different metrics/factors (e.g. $R^2$, $\text{Test-RMSE}$, $t$-test, $F$-test, normality & equal variance assumptions) that we have to consider in order to guide us to a sufficiently<sup style="color:tomato">*</sup> good model for our dataset. 
+
+We started with exploring a fully additive model and then used some adhoc approaches of feature selection to find some smaller models which can perform if not better than atleast equally good. This method didn't provide us a better performing model, but it does give us a baseline. We then used a more formal approach to select features using a Stepwise search. We then tried some transformations (techniques we learned as part of this course) like `LOG` transformation of predictors as well as experimented with adding some higher degree polynomial terms for some of the predictors. We also explored outlier detection and experiment with models fitted on the dataset with outliers removed. In the end, we picked a model (`aic_back_full_additive_model_log_poly`) which is fitted on the whole dataset and has a mix of some `LOG` transformed predictor terms as well as some higher degree polynomial terms.
+
+```{r echo=FALSE}
+summary_fm_coef <- summary(aic_back_full_additive_model_log_poly)$coefficient
+schooling_ci <- confint(aic_back_full_additive_model_log_poly, parm = "schooling", level=0.95)
+statusDeveloping_ci <- confint(aic_back_full_additive_model_log_poly, parm = "statusDeveloping", level=0.95)
+```
+
+In the final model (`aic_back_full_additive_model_log_poly`), we can see a lot of $\beta$ parameters that are on the expected line: `schooling`, `percentage_expenditure` etc. have positive impact on `life_expectancy`, for e.g. We can be **`95%`** confident that `1` year increase in `schooling` on an average improves `life_expectancy` in the interval **(``r schooling_ci[1:2]``)**. We can also see some predictors like `statusDeveloping`, `bmi`, `hiv_aids` have negative impacts on `life_expectancy`. Based on the final model we can see that on average the `life_expectancy` of a developing country is lower than a developed country by **``r abs(summary_fm_coef["statusDeveloping", "Estimate"])``**. Further discussion on the factors affecting `life_expectancy` can be seen in following ([Data Analysis and exploration]) section.
+
+We have given emphasis to both the performance metrics ($R^2$, $\text{Test-RMSE}$) as well as diagnostic plots (for validating adherence to assumptions). Throughout the process, we have clearly explained our thought process of picking one model over the other.
+
+`LOG` transformation of some of the predictors provided us with better results. We can attribute this to the fact that different factors affecting `life_expectancy` in a different way. We can very clearly see linear relationships between say `schooling` and `life_expectancy`, but some other relationships are not that linear, hence `LOG` transformation helped us. We can also see that predictors have different scales and their effect on `life_expectancy` is not uniform, which prompted us to try for some  higher degree polynomial terms.
+
+Overall, as part of model building proces, our emphasis, apart from finding the best model, is also on utilizing the knowlegde and techniques we have learned as part of this course (Project Goal #1). We have fitted a variety of models, both additive (e.g. `full_additve_model`) & interactive (e.g. `sig_interative_model`). We have also used stepwise variable selection methods (AIC/BIC) (e.g. `aic_back_full_additive`) as well as utilize common transformations like `LOG` (e.g. `aic_back_full_additive_model_log`). We have also build a model with higher degree polynomial terms, (e.g. `aic_back_full_additive_model_log_poly`). We have utilized all the metrics/factors/tools ($R^2$, $\text{Test-RMSE}$, $t$-test, $F$-test, `Residuals v. Fitted` plot and `Normal Q-Q` plot for checking variance and normality assumptions) to guide us to find the better model iteratively. We have also tried `Outlier Detection` to see if we can improve the performance of the model.
+
 ## Data Analysis and exploration
+
+This mainly refers to our bigger goal of understanding the effects of different factors on the longevity of life (Project Goal #2). We have presented some common analytics on the `life_expectancy` trends across the world (see [Data exploration and visualization]). Some of the things are quite apparent after seeing these aggregated data points and plots, countries in **African** continent consistently have some of the lowest `life_expectancy` numbers over the years in the entire world whereas **European** countries have some of the highest. Countries with higher GDP do on average tend to have better `life_expectancy`, which can be attributed to that fact that these countries might spend more on healthcare services. Our models do prove that, as `percent_expenditure` (*`expenditure on health care service as a % of GDP per capita`*) do have positive impact (positive coefficients) on `life_expectancy` in almost all the models where we have that as a predictor. We can also see that vaccinations like `Diphtheria` vaccination and `Polio` vaccination have positive impacts on `life_expectancy`. Higher numbers of HIV/AIDS deaths negatively impact `life_expectancy` (negative $\beta_{hiv\_aids}$ as well as trends from the plot shown earlier). We also see some surprising results, as size of `population` has no significant impact (at-least no significant linear relationship) on `life_expectancy` (May be due to the fact that we have lot of missing values or because of the fact that countries with large population like China do spend higher amounts of their GDP on health care services. We haven't digged in further to answer this as part of this project, but may be in future we can look into this).
+
+In the end to answer our question regarding what are some of the most important factors for a country to improve their `life_expectancy` on average; we can say that increased `schooling`, increased vaccination coverage among kids, increased expenditure on health care services, keeping the infant mortality in check are some of the most important factors as revealed by most of the models that we fitted as part of this project.
 
 ## Conclusion
 
+Through this project we do understand a little bit more about different factors that can improve/reduce life expectancy. Our models do validate our common sense understanding that more education, increased expenditure on health care service and vaccination coverage do have positive impacts on the longevity of life. Some of the future work (that we didn't do here) is to collect more data such as weather patterns in different countries and may be some other geopolitical factors which might also affect the overall life expectancy numbers, for e.g. we see that African countries have lowest life expectancy and our current models attribute it to the fact that these countries are poor (lower GDP) and have lower levels of education, but it can very well be a result of political instability.
+
+In terms of data science and statistical analysis, in future we do like to also explore a classification model (logistic regression or something else), which can classify data into two classes e.g. High-Life-Expectancy (>= 70) v. Low-Life-Expectancy (< 70). We would also like to try other forms of regression models including but not limited to `Regularized Regression Models (Lasso, Ridge, Elastic Nets)`, `Deep Learning Neural Networks` etc. We would also like to improve on the techniques we could have used for imputing the missing values, e.g. use different metrics/ways to impute missing values for different predictors rather than using one-size fits all approach (using just mean).
+
+***
+
+<p style="color:tomato; font-size:xx-small"><sup>*</sup> We do agree that if we go further towards more complex models, we will definitely find a better performing model than the one we finally choosen here. One such complex model (`aic_back_log_poly`) is presented in the [Appendix]. We have been more focussed on finding a sufficiently good performing model and more so on showcasing the knowlegde and skills that we have acquired throughout this course.</p>  
+
+***
 
 # Appendix
 
